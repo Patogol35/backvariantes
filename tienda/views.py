@@ -40,18 +40,12 @@ from .filters import ProductoFilter
 
 
 # ------------------------------------------------------------
-# PRODUCTO (🔥 MEJORADO)
+# PRODUCTO
 # ------------------------------------------------------------
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.prefetch_related(
         'imagenes',
-        Prefetch(
-            'variantes',
-            queryset=VarianteProducto.objects.prefetch_related(
-                'atributos',   # 🔥 NUEVO
-                'imagenes'
-            )
-        )
+        Prefetch('variantes__imagenes')
     )
     serializer_class = ProductoSerializer
     filterset_class = ProductoFilter
@@ -66,7 +60,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
 
 
 # ------------------------------------------------------------
-# IMÁGENES
+# IMÁGENES (🔥 NUEVO)
 # ------------------------------------------------------------
 class ProductoImagenViewSet(viewsets.ModelViewSet):
     queryset = ProductoImagen.objects.all()
@@ -89,7 +83,6 @@ def agregar_al_carrito(request):
     except Producto.DoesNotExist:
         return Response({'error': 'Producto no existe'}, status=404)
 
-    # 🔥 VALIDACIÓN DE VARIANTE (SE MANTIENE IGUAL)
     if producto.variantes.exists():
         if not variante_id:
             return Response({'error': 'Debes seleccionar una variante'}, status=400)
