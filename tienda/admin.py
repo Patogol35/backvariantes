@@ -1,6 +1,4 @@
 from django.contrib import admin
-from django.core.exceptions import ValidationError
-from django.forms.models import BaseInlineFormSet
 from datetime import datetime, timedelta
 
 from .models import (
@@ -15,45 +13,6 @@ from .models import (
     TipoAtributo,
     ValorAtributo
 )
-
-# ------------------------------------------------------------
-# 🔥 FORMSET PARA VALIDAR VARIANTES (CLAVE)
-# ------------------------------------------------------------
-class VarianteInlineFormSet(BaseInlineFormSet):
-    def clean(self):
-        super().clean()
-
-        for form in self.forms:
-            if not hasattr(form, "cleaned_data"):
-                continue
-
-            if form.cleaned_data.get("DELETE"):
-                continue
-
-            atributos = form.cleaned_data.get("atributos")
-
-            if not atributos:
-                continue
-
-            tipos = []
-
-            for atributo in atributos:
-                if atributo.tipo in tipos:
-                    raise ValidationError(
-                        "No puedes seleccionar dos valores del mismo tipo (ej: Color Azul y Color Café)."
-                    )
-                tipos.append(atributo.tipo)
-
-
-# ------------------------------------------------------------
-# 🔥 INLINE VARIANTES (CORRECTO)
-# ------------------------------------------------------------
-class VarianteInline(admin.StackedInline):
-    model = VarianteProducto
-    formset = VarianteInlineFormSet
-    extra = 0
-    filter_horizontal = ('atributos',)
-
 
 # ------------------------------------------------------------
 # 🖼️ INLINE IMÁGENES
@@ -154,12 +113,30 @@ class ProductoAdmin(admin.ModelAdmin):
     search_fields = ['nombre', 'categoria__nombre']
     list_filter = ['fecha_creacion', 'categoria', StockBajoFilter, FechaCreacionFilter]
 
-    inlines = [VarianteInline, ProductoImagenInline]
+    # 🔥 SOLO imágenes (QUITAMOS variantes)
+    inlines = [ProductoImagenInline]
 
     def stock_total(self, obj):
         return sum(v.stock for v in obj.variantes.all())
 
     stock_total.short_description = "Stock total"
+
+
+# ------------------------------------------------------------
+# 🔥 VARIANTES (SEPARADO - SOLUCIÓN REAL)
+# ------------------------------------------------------------
+@admin.register(VarianteProducto)
+class VarianteProductoAdmin(admin.ModelAdmin):
+    list_display = ('producto', 'mostrar_atributos', 'stock')
+    list_filter = ('producto',)
+    search_fields = ('producto__nombre',)
+
+    filter_horizontal = ('atributos',)
+
+    def mostrar_atributos(self, obj):
+        return ", ".join([str(a) for a in obj.atributos.all()])
+
+    mostrar_atributos.short_description = "Atributos"
 
 
 # ------------------------------------------------------------
