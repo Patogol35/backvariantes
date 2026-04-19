@@ -36,7 +36,7 @@ class Producto(models.Model):
 
 
 # ------------------------------------------------------------
-# VARIANTES
+# VARIANTES 🔥
 # ------------------------------------------------------------
 class VarianteProducto(models.Model):
     producto = models.ForeignKey(
@@ -78,7 +78,18 @@ class VarianteProducto(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.producto.nombre} - {self.talla or ''} {self.color or ''} {self.capacidad or ''} {self.marca or ''}"
+        atributos = [
+            self.talla,
+            self.color,
+            self.material,
+            self.edicion,
+            self.capacidad,
+            self.marca
+        ]
+
+        atributos = [a for a in atributos if a]
+
+        return f"{self.producto.nombre} - {' / '.join(atributos) if atributos else 'Variante'}"
 
 
 # ------------------------------------------------------------
@@ -103,7 +114,7 @@ class ProductoImagen(models.Model):
 
     def __str__(self):
         if self.variante:
-            return f"Imagen de {self.producto.nombre} ({self.variante.talla or ''} {self.variante.color or ''})"
+            return f"Imagen de {self.producto.nombre} ({self.variante})"
         return f"Imagen de {self.producto.nombre}"
 
 
@@ -136,13 +147,12 @@ class ItemCarrito(models.Model):
 
     def __str__(self):
         if self.variante:
-            return f'{self.cantidad} x {self.producto.nombre} ({self.variante.talla or ""} {self.variante.color or ""})'
+            return f'{self.cantidad} x {self.producto.nombre} ({self.variante})'
         return f'{self.cantidad} x {self.producto.nombre}'
 
     def subtotal(self):
-        if self.variante and self.variante.precio:
-            return self.cantidad * self.variante.precio
-        return self.cantidad * self.producto.precio
+        precio = self.variante.precio if self.variante and self.variante.precio else self.producto.precio
+        return self.cantidad * precio
 
 
 # ------------------------------------------------------------
@@ -179,5 +189,5 @@ class ItemPedido(models.Model):
 
     def __str__(self):
         if self.variante:
-            return f'{self.cantidad} x {self.producto.nombre} ({self.variante.talla or ""} {self.variante.color or ""})'
+            return f'{self.cantidad} x {self.producto.nombre} ({self.variante})'
         return f'{self.cantidad} x {self.producto.nombre}'
