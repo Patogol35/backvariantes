@@ -36,7 +36,7 @@ class Producto(models.Model):
 
 
 # ------------------------------------------------------------
-# VARIANTES (TALLA + COLOR OPCIONAL)
+# VARIANTES
 # ------------------------------------------------------------
 class VarianteProducto(models.Model):
     producto = models.ForeignKey(
@@ -55,6 +55,9 @@ class VarianteProducto(models.Model):
     # 🔥 TECNOLOGÍA
     capacidad = models.CharField(max_length=50, blank=True, null=True)
     marca = models.CharField(max_length=50, blank=True, null=True)
+
+    # 🔥 PRECIO POR VARIANTE
+    precio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     stock = models.PositiveIntegerField(default=0)
 
@@ -76,6 +79,8 @@ class VarianteProducto(models.Model):
 
     def __str__(self):
         return f"{self.producto.nombre} - {self.talla or ''} {self.color or ''} {self.capacidad or ''} {self.marca or ''}"
+
+
 # ------------------------------------------------------------
 # IMÁGENES
 # ------------------------------------------------------------
@@ -100,6 +105,8 @@ class ProductoImagen(models.Model):
         if self.variante:
             return f"Imagen de {self.producto.nombre} ({self.variante.talla or ''} {self.variante.color or ''})"
         return f"Imagen de {self.producto.nombre}"
+
+
 # ------------------------------------------------------------
 # CARRITO
 # ------------------------------------------------------------
@@ -133,6 +140,8 @@ class ItemCarrito(models.Model):
         return f'{self.cantidad} x {self.producto.nombre}'
 
     def subtotal(self):
+        if self.variante and self.variante.precio:
+            return self.cantidad * self.variante.precio
         return self.cantidad * self.producto.precio
 
 
