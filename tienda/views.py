@@ -35,7 +35,6 @@ from .serializers import (
 
 from .filters import ProductoFilter
 
-
 # ------------------------------------------------------------
 # PRODUCTO
 # ------------------------------------------------------------
@@ -44,14 +43,12 @@ class ProductoViewSet(viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
     filterset_class = ProductoFilter
 
-
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
 
-
 # ------------------------------------------------------------
-# AGREGAR AL CARRITO (CON VARIANTE)
+# AGREGAR AL CARRITO
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -96,7 +93,6 @@ def agregar_al_carrito(request):
 
     return Response(ItemCarritoSerializer(item).data, status=201)
 
-
 # ------------------------------------------------------------
 # ELIMINAR ITEM
 # ------------------------------------------------------------
@@ -109,7 +105,6 @@ def eliminar_del_carrito(request, item_id):
         return Response({'message': 'Eliminado'}, status=200)
     except ItemCarrito.DoesNotExist:
         return Response({'error': 'No encontrado'}, status=404)
-
 
 # ------------------------------------------------------------
 # ACTUALIZAR CANTIDAD
@@ -132,9 +127,7 @@ def actualizar_cantidad_carrito(request, item_id):
 
     item.cantidad = cantidad
     item.save()
-
     return Response(ItemCarritoSerializer(item).data)
-
 
 # ------------------------------------------------------------
 # CARRITO
@@ -147,14 +140,12 @@ class CarritoView(generics.RetrieveAPIView):
         carrito, _ = Carrito.objects.get_or_create(usuario=self.request.user)
         return carrito
 
-
 # ------------------------------------------------------------
 # REGISTER
 # ------------------------------------------------------------
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -165,9 +156,8 @@ def user_profile(request):
         "email": request.user.email,
     })
 
-
 # ------------------------------------------------------------
-# CREAR PEDIDO (CON VARIANTES)
+# CREAR PEDIDO 🔥
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -182,7 +172,7 @@ def crear_pedido(request):
     for it in items:
         if it.variante.stock < it.cantidad:
             return Response({
-                'error': f'Stock insuficiente para {it.producto.nombre} ({it.variante})'
+                'error': f'Stock insuficiente para {it.producto.nombre}'
             }, status=400)
 
     with transaction.atomic():
@@ -195,8 +185,6 @@ def crear_pedido(request):
 
         for it in items:
             variante = it.variante
-
-            # Descontar stock
             variante.stock -= it.cantidad
             variante.save()
 
@@ -212,13 +200,11 @@ def crear_pedido(request):
 
     return Response(PedidoSerializer(pedido).data, status=201)
 
-
 # ------------------------------------------------------------
 # LISTA PEDIDOS
 # ------------------------------------------------------------
 class PedidoPagination(PageNumberPagination):
     page_size = 10
-
 
 class ListaPedidosUsuario(generics.ListAPIView):
     serializer_class = PedidoSerializer
@@ -227,7 +213,6 @@ class ListaPedidosUsuario(generics.ListAPIView):
 
     def get_queryset(self):
         return Pedido.objects.filter(usuario=self.request.user).order_by('-id')
-
 
 # ------------------------------------------------------------
 # GOOGLE LOGIN
