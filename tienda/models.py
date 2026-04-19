@@ -71,12 +71,21 @@ class ProductoImagen(models.Model):
         related_name='imagenes',
         on_delete=models.CASCADE
     )
+
+    variante = models.ForeignKey(
+        VarianteProducto,
+        related_name='imagenes',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
+
     imagen = models.URLField(max_length=500)
 
     def __str__(self):
+        if self.variante:
+            return f"Imagen de {self.producto.nombre} ({self.variante.talla or ''} {self.variante.color or ''})"
         return f"Imagen de {self.producto.nombre}"
-
-
 # ------------------------------------------------------------
 # CARRITO
 # ------------------------------------------------------------
