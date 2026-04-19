@@ -48,20 +48,34 @@ class VarianteProducto(models.Model):
     talla = models.CharField(max_length=10, blank=True, null=True)
     color = models.CharField(max_length=20, blank=True, null=True)
 
+    # 🔥 NUEVOS CAMPOS
+    material = models.CharField(max_length=50, blank=True, null=True)
+    estilo = models.CharField(max_length=50, blank=True, null=True)
+
+    # 🔥 TECNOLOGÍA
+    capacidad = models.CharField(max_length=50, blank=True, null=True)  # ej: 128GB, 256GB
+    marca = models.CharField(max_length=50, blank=True, null=True)      # ej: Samsung, Apple
+
     stock = models.PositiveIntegerField(default=0)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['producto', 'talla', 'color'],
+                fields=[
+                    'producto',
+                    'talla',
+                    'color',
+                    'material',
+                    'estilo',
+                    'capacidad',
+                    'marca'
+                ],
                 name='unique_producto_variante'
             )
         ]
 
     def __str__(self):
-        return f"{self.producto.nombre} - {self.talla or ''} {self.color or ''}"
-
-
+        return f"{self.producto.nombre} - {self.talla or ''} {self.color or ''} {self.capacidad or ''} {self.marca or ''}"
 # ------------------------------------------------------------
 # IMÁGENES
 # ------------------------------------------------------------
