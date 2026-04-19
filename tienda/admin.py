@@ -16,31 +16,27 @@ from .models import (
 )
 
 # ------------------------------------------------------------
-# 🔥 VALIDACIÓN INLINE (CLAVE PARA QUE GUARDE BIEN)
+# 🔥 INLINE VARIANTES (CORREGIDO)
 # ------------------------------------------------------------
-class VarianteInline(admin.TabularInline):
+class VarianteInline(admin.StackedInline):  # 👈 IMPORTANTE
     model = VarianteProducto
     extra = 1
     filter_horizontal = ('atributos',)
 
     def save_formset(self, request, form, formset, change):
-        """
-        🔥 Evita variantes con atributos duplicados
-        Ej: Talla M + Talla X ❌
-        """
         instances = formset.save(commit=False)
 
         for instance in instances:
-            tipos = []
+            instance.save()  # 👈 guardar primero
 
+            # 🔥 validar atributos duplicados
+            tipos = []
             for atributo in instance.atributos.all():
                 if atributo.tipo in tipos:
                     raise ValidationError(
                         "No puedes repetir tipos de atributo (ej: dos tallas)."
                     )
                 tipos.append(atributo.tipo)
-
-            instance.save()
 
         formset.save_m2m()
 
