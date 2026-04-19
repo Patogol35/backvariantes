@@ -40,12 +40,15 @@ from .filters import ProductoFilter
 
 
 # ------------------------------------------------------------
-# PRODUCTO
+# PRODUCTO 🔥 CORREGIDO
 # ------------------------------------------------------------
 class ProductoViewSet(viewsets.ModelViewSet):
     queryset = Producto.objects.prefetch_related(
         'imagenes',
-        Prefetch('variantes__imagenes')
+        Prefetch(
+            'variantes',
+            queryset=VarianteProducto.objects.prefetch_related('imagenes')
+        )
     )
     serializer_class = ProductoSerializer
     filterset_class = ProductoFilter
@@ -192,7 +195,7 @@ def user_profile(request):
 
 
 # ------------------------------------------------------------
-# CREAR PEDIDO (🔥 CORREGIDO)
+# CREAR PEDIDO 🔥 CORREGIDO CON PRECIO VARIANTE
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -212,8 +215,11 @@ def crear_pedido(request):
     with transaction.atomic():
         total = sum(
             (
-                Decimal(it.variante.precio if it.variante and it.variante.precio else it.producto.precio)
-                * it.cantidad
+                Decimal(
+                    it.variante.precio
+                    if it.variante and it.variante.precio is not None
+                    else it.producto.precio
+                ) * it.cantidad
                 for it in items
             ),
             Decimal('0')
@@ -232,7 +238,11 @@ def crear_pedido(request):
                 variante.save()
                 variante.refresh_from_db()
 
-            precio = it.variante.precio if it.variante and it.variante.precio else it.producto.precio
+            precio = (
+                it.variante.precio
+                if it.variante and it.variante.precio is not None
+                else it.producto.precio
+            )
 
             ItemPedido.objects.create(
                 pedido=pedido,
