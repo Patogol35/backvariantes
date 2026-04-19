@@ -13,7 +13,7 @@ DEBUG = os.environ.get("DEBUG", "False") == "True"
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
-    "https://backvariantes.onrender.com",
+    "backvariantes.onrender.com",
     "ecommerce-jorge-patricio.vercel.app",
 ]
 
