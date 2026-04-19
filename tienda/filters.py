@@ -7,6 +7,7 @@ class ProductoFilter(django_filters.FilterSet):
     precio_max = django_filters.NumberFilter(field_name='precio', lookup_expr='lte')
     categoria = django_filters.NumberFilter(field_name='categoria__id')
 
+    # 🔥 FILTROS DINÁMICOS
     talla = django_filters.CharFilter(method='filter_talla')
     color = django_filters.CharFilter(method='filter_color')
 
@@ -14,10 +15,20 @@ class ProductoFilter(django_filters.FilterSet):
         model = Producto
         fields = ['precio_min', 'precio_max', 'categoria', 'talla', 'color']
 
-    # 🔥 FILTRO TALLA SIN DUPLICADOS
+    # ------------------------------------------------------------
+    # 🔥 FILTRO TALLA (DINÁMICO)
+    # ------------------------------------------------------------
     def filter_talla(self, queryset, name, value):
-        return queryset.filter(variantes__talla=value).distinct()
+        return queryset.filter(
+            variantes__atributos__tipo__nombre__iexact='talla',
+            variantes__atributos__valor__iexact=value
+        ).distinct()
 
-    # 🔥 FILTRO COLOR SIN DUPLICADOS
+    # ------------------------------------------------------------
+    # 🔥 FILTRO COLOR (DINÁMICO)
+    # ------------------------------------------------------------
     def filter_color(self, queryset, name, value):
-        return queryset.filter(variantes__color=value).distinct()
+        return queryset.filter(
+            variantes__atributos__tipo__nombre__iexact='color',
+            variantes__atributos__valor__iexact=value
+        ).distinct()
