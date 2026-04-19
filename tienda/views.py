@@ -35,6 +35,7 @@ from .serializers import (
 
 from .filters import ProductoFilter
 
+
 # ------------------------------------------------------------
 # PRODUCTO
 # ------------------------------------------------------------
@@ -43,9 +44,11 @@ class ProductoViewSet(viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
     filterset_class = ProductoFilter
 
+
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
+
 
 # ------------------------------------------------------------
 # AGREGAR AL CARRITO (CON VARIANTE)
@@ -58,7 +61,7 @@ def agregar_al_carrito(request):
     cantidad = int(request.data.get('cantidad', 1))
 
     if not variante_id:
-        return Response({'error': 'Debes seleccionar una talla'}, status=400)
+        return Response({'error': 'Debes seleccionar una variante'}, status=400)
 
     try:
         producto = Producto.objects.get(id=producto_id)
@@ -93,6 +96,7 @@ def agregar_al_carrito(request):
 
     return Response(ItemCarritoSerializer(item).data, status=201)
 
+
 # ------------------------------------------------------------
 # ELIMINAR ITEM
 # ------------------------------------------------------------
@@ -105,6 +109,7 @@ def eliminar_del_carrito(request, item_id):
         return Response({'message': 'Eliminado'}, status=200)
     except ItemCarrito.DoesNotExist:
         return Response({'error': 'No encontrado'}, status=404)
+
 
 # ------------------------------------------------------------
 # ACTUALIZAR CANTIDAD
@@ -127,7 +132,9 @@ def actualizar_cantidad_carrito(request, item_id):
 
     item.cantidad = cantidad
     item.save()
+
     return Response(ItemCarritoSerializer(item).data)
+
 
 # ------------------------------------------------------------
 # CARRITO
@@ -140,12 +147,14 @@ class CarritoView(generics.RetrieveAPIView):
         carrito, _ = Carrito.objects.get_or_create(usuario=self.request.user)
         return carrito
 
+
 # ------------------------------------------------------------
 # REGISTER
 # ------------------------------------------------------------
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -155,6 +164,7 @@ def user_profile(request):
         "username": request.user.username,
         "email": request.user.email,
     })
+
 
 # ------------------------------------------------------------
 # CREAR PEDIDO (CON VARIANTES)
@@ -172,12 +182,12 @@ def crear_pedido(request):
     for it in items:
         if it.variante.stock < it.cantidad:
             return Response({
-                'error': f'Stock insuficiente para {it.producto.nombre} ({it.variante.talla})'
+                'error': f'Stock insuficiente para {it.producto.nombre} ({it.variante})'
             }, status=400)
 
     with transaction.atomic():
         total = sum(
-            (Decimal(it.producto.precio) * it.cantidad for it in items),
+            (Decimal(it.variante.precio) * it.cantidad for it in items),
             Decimal('0')
         )
 
@@ -185,6 +195,8 @@ def crear_pedido(request):
 
         for it in items:
             variante = it.variante
+
+            # Descontar stock
             variante.stock -= it.cantidad
             variante.save()
 
@@ -193,18 +205,20 @@ def crear_pedido(request):
                 producto=it.producto,
                 variante=variante,
                 cantidad=it.cantidad,
-                precio_unitario=it.producto.precio
+                precio_unitario=it.variante.precio
             )
 
         carrito.items.all().delete()
 
     return Response(PedidoSerializer(pedido).data, status=201)
 
+
 # ------------------------------------------------------------
 # LISTA PEDIDOS
 # ------------------------------------------------------------
 class PedidoPagination(PageNumberPagination):
     page_size = 10
+
 
 class ListaPedidosUsuario(generics.ListAPIView):
     serializer_class = PedidoSerializer
@@ -213,6 +227,7 @@ class ListaPedidosUsuario(generics.ListAPIView):
 
     def get_queryset(self):
         return Pedido.objects.filter(usuario=self.request.user).order_by('-id')
+
 
 # ------------------------------------------------------------
 # GOOGLE LOGIN
