@@ -9,7 +9,7 @@ pip install -r requirements.txt
 python manage.py collectstatic --noinput
 
 # Aplica migraciones
-
+python manage.py makemigrations
 python manage.py migrate
 
 # Crear superusuario automático si no existe
