@@ -13,7 +13,7 @@ from .models import (
 )
 
 # ------------------------------------------------------------
-# 🔥 FILTRO STOCK (SOBRE VARIANTES)
+# 🔥 FILTRO STOCK (VARIANTES)
 # ------------------------------------------------------------
 class StockBajoFilter(admin.SimpleListFilter):
     title = 'Stock (variantes)'
@@ -38,7 +38,6 @@ class StockBajoFilter(admin.SimpleListFilter):
             ).distinct()
 
         return queryset
-
 
 # ------------------------------------------------------------
 # 📅 FILTRO FECHA
@@ -65,23 +64,13 @@ class FechaCreacionFilter(admin.SimpleListFilter):
 
         return queryset
 
-
 # ------------------------------------------------------------
-# 🧩 INLINE VARIANTES
+# 🧩 INLINE VARIANTES 🔥
 # ------------------------------------------------------------
 class VarianteInline(admin.TabularInline):
     model = VarianteProducto
     extra = 1
-
-    fields = (
-        'talla',
-        'color',
-        'capacidad',
-        'modelo',
-        'precio',
-        'stock'
-    )
-
+    fields = ('talla', 'color', 'modelo', 'capacidad', 'precio', 'stock')
 
 # ------------------------------------------------------------
 # 🖼️ INLINE IMÁGENES
@@ -89,7 +78,6 @@ class VarianteInline(admin.TabularInline):
 class ProductoImagenInline(admin.TabularInline):
     model = ProductoImagen
     extra = 1
-
 
 # ------------------------------------------------------------
 # 📂 CATEGORÍA
@@ -99,40 +87,26 @@ class CategoriaAdmin(admin.ModelAdmin):
     list_display = ("id", "nombre", "descripcion")
     search_fields = ["nombre"]
 
-
 # ------------------------------------------------------------
-# 🛍️ PRODUCTO
+# 🛍️ PRODUCTO (ACTUALIZADO)
 # ------------------------------------------------------------
 class ProductoAdmin(admin.ModelAdmin):
-
-    # 🔥 Precio mínimo entre variantes
-    def precio_min(self, obj):
-        variantes = obj.variantes.all()
-        if variantes.exists():
-            return min(v.precio for v in variantes)
-        return obj.precio
-
-    precio_min.short_description = "Precio desde"
-
-    # 🔥 Stock total
-    def stock_total(self, obj):
-        return sum(v.stock for v in obj.variantes.all())
-
-    stock_total.short_description = "Stock total"
-
-    list_display = (
-        'nombre',
-        'precio_min',
-        'stock_total',
-        'fecha_creacion',
-        'categoria'
-    )
-
+    list_display = ('nombre', 'fecha_creacion', 'categoria', 'precio_min', 'precio_max')
     search_fields = ['nombre']
-    list_filter = ['categoria', StockBajoFilter, FechaCreacionFilter]
+    list_filter = ['fecha_creacion', 'categoria', StockBajoFilter, FechaCreacionFilter]
 
     inlines = [VarianteInline, ProductoImagenInline]
 
+    # 🔥 precios dinámicos
+    def precio_min(self, obj):
+        precios = obj.variantes.values_list('precio', flat=True)
+        return min(precios) if precios else 0
+    precio_min.short_description = "Precio mínimo"
+
+    def precio_max(self, obj):
+        precios = obj.variantes.values_list('precio', flat=True)
+        return max(precios) if precios else 0
+    precio_max.short_description = "Precio máximo"
 
 # ------------------------------------------------------------
 # 🛒 CARRITO
@@ -140,8 +114,6 @@ class ProductoAdmin(admin.ModelAdmin):
 class ItemCarritoInline(admin.TabularInline):
     model = ItemCarrito
     extra = 0
-    fields = ('producto', 'variante', 'cantidad')
-
 
 class CarritoAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'creado')
@@ -149,22 +121,18 @@ class CarritoAdmin(admin.ModelAdmin):
     search_fields = ['usuario__username']
     list_filter = ['creado']
 
-
 # ------------------------------------------------------------
 # 📦 PEDIDOS
 # ------------------------------------------------------------
 class ItemPedidoInline(admin.TabularInline):
     model = ItemPedido
     extra = 0
-    fields = ('producto', 'variante', 'cantidad', 'precio_unitario')
-
 
 class PedidoAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'fecha', 'total')
     inlines = [ItemPedidoInline]
     search_fields = ['usuario__username']
     list_filter = ['fecha']
-
 
 # ------------------------------------------------------------
 # 🚀 REGISTROS
