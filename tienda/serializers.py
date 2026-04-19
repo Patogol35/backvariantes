@@ -43,14 +43,25 @@ class ProductoImagenSerializer(serializers.ModelSerializer):
 
 
 # ------------------------------------------------------------
-# VARIANTE
+# VARIANTE 🔥 (ACTUALIZADO)
 # ------------------------------------------------------------
 class VarianteProductoSerializer(serializers.ModelSerializer):
     imagenes = ProductoImagenSerializer(many=True, read_only=True)
 
     class Meta:
         model = VarianteProducto
-        fields = ['id', 'talla', 'color', 'stock', 'imagenes']
+        fields = [
+            'id',
+            'talla',
+            'color',
+            'material',
+            'edicion',
+            'capacidad',
+            'marca',
+            'precio',   # 🔥 precio por variante
+            'stock',
+            'imagenes'
+        ]
 
 
 # ------------------------------------------------------------
