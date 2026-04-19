@@ -22,21 +22,35 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 
 # ------------------------------------------------------------
-# VARIANTE
-# ------------------------------------------------------------
-class VarianteProductoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = VarianteProducto
-        fields = ['id', 'talla', 'color', 'stock']
-
-
-# ------------------------------------------------------------
 # IMÁGENES
 # ------------------------------------------------------------
 class ProductoImagenSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = ProductoImagen
-        fields = ['imagen']
+        fields = ['id', 'imagen', 'producto', 'variante']
+
+    def validate(self, data):
+        variante = data.get('variante')
+        producto = data.get('producto')
+
+        if variante and variante.producto != producto:
+            raise serializers.ValidationError(
+                "La variante no pertenece al producto"
+            )
+
+        return data
+
+
+# ------------------------------------------------------------
+# VARIANTE
+# ------------------------------------------------------------
+class VarianteProductoSerializer(serializers.ModelSerializer):
+    imagenes = ProductoImagenSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = VarianteProducto
+        fields = ['id', 'talla', 'color', 'stock', 'imagenes']
 
 
 # ------------------------------------------------------------
@@ -44,12 +58,16 @@ class ProductoImagenSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 class ProductoSerializer(serializers.ModelSerializer):
     categoria = CategoriaSerializer(read_only=True)
+
     categoria_id = serializers.PrimaryKeyRelatedField(
         queryset=Categoria.objects.all(),
         source="categoria",
         write_only=True
     )
-    imagenes = ProductoImagenSerializer(many=True, read_only=True)
+
+    # 🔥 SOLO imágenes generales (sin variante)
+    imagenes = serializers.SerializerMethodField()
+
     variantes = VarianteProductoSerializer(many=True, read_only=True)
 
     class Meta:
@@ -66,6 +84,10 @@ class ProductoSerializer(serializers.ModelSerializer):
             'imagenes',
             'variantes'
         ]
+
+    def get_imagenes(self, obj):
+        imagenes = obj.imagenes.filter(variante__isnull=True)
+        return ProductoImagenSerializer(imagenes, many=True).data
 
 
 # ------------------------------------------------------------
@@ -159,4 +181,3 @@ class PedidoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pedido
         fields = ['id', 'usuario', 'fecha', 'total', 'items']
-
