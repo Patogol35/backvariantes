@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+from django.forms.models import BaseInlineFormSet
 from datetime import datetime, timedelta
 
 from .models import (
@@ -16,29 +17,42 @@ from .models import (
 )
 
 # ------------------------------------------------------------
-# 🔥 INLINE VARIANTES (CORREGIDO)
+# 🔥 FORMSET PARA VALIDAR VARIANTES (CLAVE)
 # ------------------------------------------------------------
-class VarianteInline(admin.StackedInline):  # 👈 IMPORTANTE
-    model = VarianteProducto
-    extra = 1
-    filter_horizontal = ('atributos',)
+class VarianteInlineFormSet(BaseInlineFormSet):
+    def clean(self):
+        super().clean()
 
-    def save_formset(self, request, form, formset, change):
-        instances = formset.save(commit=False)
+        for form in self.forms:
+            if not hasattr(form, "cleaned_data"):
+                continue
 
-        for instance in instances:
-            instance.save()  # 👈 guardar primero
+            if form.cleaned_data.get("DELETE"):
+                continue
 
-            # 🔥 validar atributos duplicados
+            atributos = form.cleaned_data.get("atributos")
+
+            if not atributos:
+                continue
+
             tipos = []
-            for atributo in instance.atributos.all():
+
+            for atributo in atributos:
                 if atributo.tipo in tipos:
                     raise ValidationError(
-                        "No puedes repetir tipos de atributo (ej: dos tallas)."
+                        "No puedes seleccionar dos valores del mismo tipo (ej: Color Azul y Color Café)."
                     )
                 tipos.append(atributo.tipo)
 
-        formset.save_m2m()
+
+# ------------------------------------------------------------
+# 🔥 INLINE VARIANTES (CORRECTO)
+# ------------------------------------------------------------
+class VarianteInline(admin.StackedInline):
+    model = VarianteProducto
+    formset = VarianteInlineFormSet
+    extra = 0
+    filter_horizontal = ('atributos',)
 
 
 # ------------------------------------------------------------
