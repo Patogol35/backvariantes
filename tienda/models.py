@@ -36,7 +36,32 @@ class Producto(models.Model):
 
 
 # ------------------------------------------------------------
-# VARIANTES (TALLA + COLOR OPCIONAL)
+# 🔥 NUEVO: TIPOS DE ATRIBUTOS (talla, color, etc.)
+# ------------------------------------------------------------
+class TipoAtributo(models.Model):
+    nombre = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.nombre
+
+
+# ------------------------------------------------------------
+# 🔥 NUEVO: VALORES (rojo, XL, algodón, etc.)
+# ------------------------------------------------------------
+class ValorAtributo(models.Model):
+    tipo = models.ForeignKey(
+        TipoAtributo,
+        on_delete=models.CASCADE,
+        related_name="valores"
+    )
+    valor = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.tipo.nombre}: {self.valor}"
+
+
+# ------------------------------------------------------------
+# 🔥 VARIANTES DINÁMICAS
 # ------------------------------------------------------------
 class VarianteProducto(models.Model):
     producto = models.ForeignKey(
@@ -45,21 +70,15 @@ class VarianteProducto(models.Model):
         on_delete=models.CASCADE
     )
 
-    talla = models.CharField(max_length=10, blank=True, null=True)
-    color = models.CharField(max_length=20, blank=True, null=True)
+    atributos = models.ManyToManyField(ValorAtributo, related_name="variantes")
 
     stock = models.PositiveIntegerField(default=0)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['producto', 'talla', 'color'],
-                name='unique_producto_variante'
-            )
-        ]
-
     def __str__(self):
-        return f"{self.producto.nombre} - {self.talla or ''} {self.color or ''}"
+        atributos_str = ", ".join(
+            [f"{a.tipo.nombre}: {a.valor}" for a in self.atributos.all()]
+        )
+        return f"{self.producto.nombre} ({atributos_str})"
 
 
 # ------------------------------------------------------------
@@ -84,8 +103,13 @@ class ProductoImagen(models.Model):
 
     def __str__(self):
         if self.variante:
-            return f"Imagen de {self.producto.nombre} ({self.variante.talla or ''} {self.variante.color or ''})"
+            atributos_str = ", ".join(
+                [f"{a.tipo.nombre}: {a.valor}" for a in self.variante.atributos.all()]
+            )
+            return f"Imagen de {self.producto.nombre} ({atributos_str})"
         return f"Imagen de {self.producto.nombre}"
+
+
 # ------------------------------------------------------------
 # CARRITO
 # ------------------------------------------------------------
@@ -115,7 +139,10 @@ class ItemCarrito(models.Model):
 
     def __str__(self):
         if self.variante:
-            return f'{self.cantidad} x {self.producto.nombre} ({self.variante.talla or ""} {self.variante.color or ""})'
+            atributos_str = ", ".join(
+                [f"{a.tipo.nombre}: {a.valor}" for a in self.variante.atributos.all()]
+            )
+            return f'{self.cantidad} x {self.producto.nombre} ({atributos_str})'
         return f'{self.cantidad} x {self.producto.nombre}'
 
     def subtotal(self):
@@ -156,5 +183,8 @@ class ItemPedido(models.Model):
 
     def __str__(self):
         if self.variante:
-            return f'{self.cantidad} x {self.producto.nombre} ({self.variante.talla or ""} {self.variante.color or ""})'
+            atributos_str = ", ".join(
+                [f"{a.tipo.nombre}: {a.valor}" for a in self.variante.atributos.all()]
+            )
+            return f'{self.cantidad} x {self.producto.nombre} ({atributos_str})'
         return f'{self.cantidad} x {self.producto.nombre}'
