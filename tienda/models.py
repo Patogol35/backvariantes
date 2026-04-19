@@ -11,13 +11,14 @@ class Categoria(models.Model):
     def __str__(self):
         return self.nombre
 
+
 # ------------------------------------------------------------
 # PRODUCTO
 # ------------------------------------------------------------
 class Producto(models.Model):
     nombre = models.CharField(max_length=255)
     descripcion = models.TextField()
-    imagen = models.URLField(max_length=500)
+    imagen = models.URLField(max_length=500)  # imagen principal
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     categoria = models.ForeignKey(
@@ -30,6 +31,7 @@ class Producto(models.Model):
 
     def __str__(self):
         return self.nombre
+
 
 # ------------------------------------------------------------
 # VARIANTES 🔥
@@ -52,8 +54,9 @@ class VarianteProducto(models.Model):
     def __str__(self):
         return f"{self.producto.nombre} - {self.talla or ''} {self.color or ''} {self.modelo or ''}"
 
+
 # ------------------------------------------------------------
-# IMÁGENES
+# IMÁGENES DEL PRODUCTO
 # ------------------------------------------------------------
 class ProductoImagen(models.Model):
     producto = models.ForeignKey(
@@ -66,6 +69,22 @@ class ProductoImagen(models.Model):
     def __str__(self):
         return f"Imagen de {self.producto.nombre}"
 
+
+# ------------------------------------------------------------
+# 🔥 IMÁGENES POR VARIANTE (NUEVO)
+# ------------------------------------------------------------
+class VarianteImagen(models.Model):
+    variante = models.ForeignKey(
+        VarianteProducto,
+        related_name='imagenes',
+        on_delete=models.CASCADE
+    )
+    imagen = models.URLField(max_length=500)
+
+    def __str__(self):
+        return f"Imagen de {self.variante}"
+
+
 # ------------------------------------------------------------
 # CARRITO
 # ------------------------------------------------------------
@@ -75,6 +94,7 @@ class Carrito(models.Model):
 
     def __str__(self):
         return f'Carrito de {self.usuario.username}'
+
 
 # ------------------------------------------------------------
 # ITEM CARRITO
@@ -91,6 +111,7 @@ class ItemCarrito(models.Model):
     def subtotal(self):
         return self.cantidad * self.variante.precio
 
+
 # ------------------------------------------------------------
 # PEDIDO
 # ------------------------------------------------------------
@@ -101,6 +122,7 @@ class Pedido(models.Model):
 
     def __str__(self):
         return f'Pedido #{self.id} - {self.usuario.username}'
+
 
 # ------------------------------------------------------------
 # ITEM PEDIDO

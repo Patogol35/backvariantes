@@ -4,12 +4,14 @@ from .models import (
     Categoria,
     ProductoImagen,
     VarianteProducto,
+    VarianteImagen,
     Carrito,
     ItemCarrito,
     Pedido,
     ItemPedido
 )
 from django.contrib.auth.models import User
+
 
 # ------------------------------------------------------------
 # CATEGORÍA
@@ -19,10 +21,22 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = "__all__"
 
+
+# ------------------------------------------------------------
+# 🔥 IMÁGENES DE VARIANTE
+# ------------------------------------------------------------
+class VarianteImagenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VarianteImagen
+        fields = ['imagen']
+
+
 # ------------------------------------------------------------
 # VARIANTE 🔥
 # ------------------------------------------------------------
 class VarianteProductoSerializer(serializers.ModelSerializer):
+    imagenes = VarianteImagenSerializer(many=True, read_only=True)
+
     class Meta:
         model = VarianteProducto
         fields = [
@@ -32,16 +46,19 @@ class VarianteProductoSerializer(serializers.ModelSerializer):
             'modelo',
             'capacidad',
             'precio',
-            'stock'
+            'stock',
+            'imagenes'  # 🔥 imágenes propias de la variante
         ]
 
+
 # ------------------------------------------------------------
-# IMÁGENES
+# IMÁGENES PRODUCTO
 # ------------------------------------------------------------
 class ProductoImagenSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductoImagen
         fields = ['imagen']
+
 
 # ------------------------------------------------------------
 # PRODUCTO
@@ -62,6 +79,7 @@ class ProductoSerializer(serializers.ModelSerializer):
         model = Producto
         fields = "__all__"
 
+
 # ------------------------------------------------------------
 # ITEM CARRITO
 # ------------------------------------------------------------
@@ -77,6 +95,7 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
     def get_subtotal(self, obj):
         return obj.cantidad * obj.variante.precio
 
+
 # ------------------------------------------------------------
 # CARRITO
 # ------------------------------------------------------------
@@ -86,6 +105,7 @@ class CarritoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Carrito
         fields = ['id', 'usuario', 'creado', 'items']
+
 
 # ------------------------------------------------------------
 # USUARIO
@@ -120,6 +140,7 @@ class UserSerializer(serializers.ModelSerializer):
         validated_data['email'] = validated_data['email'].strip().lower()
         return User.objects.create_user(**validated_data)
 
+
 # ------------------------------------------------------------
 # ITEM PEDIDO
 # ------------------------------------------------------------
@@ -134,6 +155,7 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
 
     def get_subtotal(self, obj):
         return obj.cantidad * obj.precio_unitario
+
 
 # ------------------------------------------------------------
 # PEDIDO

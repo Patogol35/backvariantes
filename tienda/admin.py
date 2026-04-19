@@ -9,7 +9,8 @@ from .models import (
     ItemCarrito,
     Pedido,
     ItemPedido,
-    VarianteProducto
+    VarianteProducto,
+    VarianteImagen
 )
 
 # ------------------------------------------------------------
@@ -65,19 +66,27 @@ class FechaCreacionFilter(admin.SimpleListFilter):
         return queryset
 
 # ------------------------------------------------------------
-# 🧩 INLINE VARIANTES 🔥
+# 🖼️ INLINE IMÁGENES PRODUCTO
+# ------------------------------------------------------------
+class ProductoImagenInline(admin.TabularInline):
+    model = ProductoImagen
+    extra = 1
+
+# ------------------------------------------------------------
+# 🔥 INLINE IMÁGENES VARIANTE
+# ------------------------------------------------------------
+class VarianteImagenInline(admin.TabularInline):
+    model = VarianteImagen
+    extra = 1
+
+# ------------------------------------------------------------
+# 🧩 INLINE VARIANTES
 # ------------------------------------------------------------
 class VarianteInline(admin.TabularInline):
     model = VarianteProducto
     extra = 1
     fields = ('talla', 'color', 'modelo', 'capacidad', 'precio', 'stock')
-
-# ------------------------------------------------------------
-# 🖼️ INLINE IMÁGENES
-# ------------------------------------------------------------
-class ProductoImagenInline(admin.TabularInline):
-    model = ProductoImagen
-    extra = 1
+    show_change_link = True  # 🔥 permite ir a editar la variante
 
 # ------------------------------------------------------------
 # 📂 CATEGORÍA
@@ -88,8 +97,9 @@ class CategoriaAdmin(admin.ModelAdmin):
     search_fields = ["nombre"]
 
 # ------------------------------------------------------------
-# 🛍️ PRODUCTO (ACTUALIZADO)
+# 🛍️ PRODUCTO
 # ------------------------------------------------------------
+@admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'fecha_creacion', 'categoria', 'precio_min', 'precio_max')
     search_fields = ['nombre']
@@ -97,16 +107,26 @@ class ProductoAdmin(admin.ModelAdmin):
 
     inlines = [VarianteInline, ProductoImagenInline]
 
-    # 🔥 precios dinámicos
     def precio_min(self, obj):
-        precios = obj.variantes.values_list('precio', flat=True)
+        precios = [p for p in obj.variantes.values_list('precio', flat=True) if p is not None]
         return min(precios) if precios else 0
     precio_min.short_description = "Precio mínimo"
 
     def precio_max(self, obj):
-        precios = obj.variantes.values_list('precio', flat=True)
+        precios = [p for p in obj.variantes.values_list('precio', flat=True) if p is not None]
         return max(precios) if precios else 0
     precio_max.short_description = "Precio máximo"
+
+# ------------------------------------------------------------
+# 🔥 VARIANTE (AQUÍ EDITAS SUS IMÁGENES)
+# ------------------------------------------------------------
+@admin.register(VarianteProducto)
+class VarianteProductoAdmin(admin.ModelAdmin):
+    list_display = ('producto', 'talla', 'color', 'modelo', 'precio', 'stock')
+    search_fields = ['producto__nombre', 'color', 'modelo']
+    list_filter = ['producto', 'color']
+
+    inlines = [VarianteImagenInline]
 
 # ------------------------------------------------------------
 # 🛒 CARRITO
@@ -115,6 +135,7 @@ class ItemCarritoInline(admin.TabularInline):
     model = ItemCarrito
     extra = 0
 
+@admin.register(Carrito)
 class CarritoAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'creado')
     inlines = [ItemCarritoInline]
@@ -128,15 +149,9 @@ class ItemPedidoInline(admin.TabularInline):
     model = ItemPedido
     extra = 0
 
+@admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'fecha', 'total')
     inlines = [ItemPedidoInline]
     search_fields = ['usuario__username']
     list_filter = ['fecha']
-
-# ------------------------------------------------------------
-# 🚀 REGISTROS
-# ------------------------------------------------------------
-admin.site.register(Producto, ProductoAdmin)
-admin.site.register(Carrito, CarritoAdmin)
-admin.site.register(Pedido, PedidoAdmin)
