@@ -19,9 +19,8 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = "__all__"
 
-
 # ------------------------------------------------------------
-# VARIANTE
+# VARIANTE 🔥
 # ------------------------------------------------------------
 class VarianteProductoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,12 +29,11 @@ class VarianteProductoSerializer(serializers.ModelSerializer):
             'id',
             'talla',
             'color',
-            'capacidad',
             'modelo',
+            'capacidad',
             'precio',
             'stock'
         ]
-
 
 # ------------------------------------------------------------
 # IMÁGENES
@@ -44,7 +42,6 @@ class ProductoImagenSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductoImagen
         fields = ['imagen']
-
 
 # ------------------------------------------------------------
 # PRODUCTO
@@ -65,44 +62,20 @@ class ProductoSerializer(serializers.ModelSerializer):
         model = Producto
         fields = "__all__"
 
-
 # ------------------------------------------------------------
 # ITEM CARRITO
 # ------------------------------------------------------------
 class ItemCarritoSerializer(serializers.ModelSerializer):
     producto = ProductoSerializer(read_only=True)
     variante = VarianteProductoSerializer(read_only=True)
-
-    # 👇 para crear desde frontend
-    producto_id = serializers.PrimaryKeyRelatedField(
-        queryset=Producto.objects.all(),
-        source='producto',
-        write_only=True
-    )
-
-    variante_id = serializers.PrimaryKeyRelatedField(
-        queryset=VarianteProducto.objects.all(),
-        source='variante',
-        write_only=True
-    )
-
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
         model = ItemCarrito
-        fields = [
-            'id',
-            'producto',
-            'variante',
-            'producto_id',
-            'variante_id',
-            'cantidad',
-            'subtotal'
-        ]
+        fields = ['id', 'producto', 'variante', 'cantidad', 'subtotal']
 
     def get_subtotal(self, obj):
-        return obj.subtotal()
-
+        return obj.cantidad * obj.variante.precio
 
 # ------------------------------------------------------------
 # CARRITO
@@ -113,7 +86,6 @@ class CarritoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Carrito
         fields = ['id', 'usuario', 'creado', 'items']
-
 
 # ------------------------------------------------------------
 # USUARIO
@@ -148,7 +120,6 @@ class UserSerializer(serializers.ModelSerializer):
         validated_data['email'] = validated_data['email'].strip().lower()
         return User.objects.create_user(**validated_data)
 
-
 # ------------------------------------------------------------
 # ITEM PEDIDO
 # ------------------------------------------------------------
@@ -159,17 +130,10 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ItemPedido
-        fields = [
-            'producto',
-            'variante',
-            'cantidad',
-            'precio_unitario',
-            'subtotal'
-        ]
+        fields = ['producto', 'variante', 'cantidad', 'precio_unitario', 'subtotal']
 
     def get_subtotal(self, obj):
-        return obj.subtotal()
-
+        return obj.cantidad * obj.precio_unitario
 
 # ------------------------------------------------------------
 # PEDIDO
