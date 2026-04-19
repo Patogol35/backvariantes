@@ -60,7 +60,7 @@ class CategoriaViewSet(viewsets.ModelViewSet):
 
 
 # ------------------------------------------------------------
-# IMÁGENES (🔥 NUEVO)
+# IMÁGENES
 # ------------------------------------------------------------
 class ProductoImagenViewSet(viewsets.ModelViewSet):
     queryset = ProductoImagen.objects.all()
@@ -192,7 +192,7 @@ def user_profile(request):
 
 
 # ------------------------------------------------------------
-# CREAR PEDIDO
+# CREAR PEDIDO (🔥 CORREGIDO)
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -206,12 +206,16 @@ def crear_pedido(request):
     for it in items:
         if it.variante and it.variante.stock < it.cantidad:
             return Response({
-                'error': f'Stock insuficiente para {it.producto.nombre}'
+                'error': f'Stock insuficiente para {it.producto.nombre} ({it.variante})'
             }, status=400)
 
     with transaction.atomic():
         total = sum(
-            (Decimal(it.producto.precio) * it.cantidad for it in items),
+            (
+                Decimal(it.variante.precio if it.variante and it.variante.precio else it.producto.precio)
+                * it.cantidad
+                for it in items
+            ),
             Decimal('0')
         )
 
@@ -228,12 +232,14 @@ def crear_pedido(request):
                 variante.save()
                 variante.refresh_from_db()
 
+            precio = it.variante.precio if it.variante and it.variante.precio else it.producto.precio
+
             ItemPedido.objects.create(
                 pedido=pedido,
                 producto=it.producto,
                 variante=variante,
                 cantidad=it.cantidad,
-                precio_unitario=it.producto.precio
+                precio_unitario=precio
             )
 
         carrito.items.all().delete()
