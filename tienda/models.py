@@ -1,7 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
 # ------------------------------------------------------------
 # CATEGORÍA
 # ------------------------------------------------------------
@@ -11,7 +10,6 @@ class Categoria(models.Model):
 
     def __str__(self):
         return self.nombre
-
 
 # ------------------------------------------------------------
 # PRODUCTO
@@ -34,9 +32,8 @@ class Producto(models.Model):
     def __str__(self):
         return self.nombre
 
-
 # ------------------------------------------------------------
-# VARIANTES 🔥
+# VARIANTES (TALLAS)
 # ------------------------------------------------------------
 class VarianteProducto(models.Model):
     producto = models.ForeignKey(
@@ -44,53 +41,11 @@ class VarianteProducto(models.Model):
         related_name="variantes",
         on_delete=models.CASCADE
     )
-
-    talla = models.CharField(max_length=10, blank=True, null=True)
-    color = models.CharField(max_length=20, blank=True, null=True)
-
-    # 🔥 NUEVOS CAMPOS
-    material = models.CharField(max_length=50, blank=True, null=True)
-    edicion = models.CharField(max_length=50, blank=True, null=True)
-
-    # 🔥 TECNOLOGÍA
-    capacidad = models.CharField(max_length=50, blank=True, null=True)
-    marca = models.CharField(max_length=50, blank=True, null=True)
-
-    # 🔥 PRECIO POR VARIANTE
-    precio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-
-    stock = models.PositiveIntegerField(default=0)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=[
-                    'producto',
-                    'talla',
-                    'color',
-                    'material',
-                    'edicion',
-                    'capacidad',
-                    'marca'
-                ],
-                name='unique_producto_variante'
-            )
-        ]
+    talla = models.CharField(max_length=10)
+    stock = models.IntegerField(default=0)
 
     def __str__(self):
-        atributos = [
-            self.talla,
-            self.color,
-            self.material,
-            self.edicion,
-            self.capacidad,
-            self.marca
-        ]
-
-        atributos = [a for a in atributos if a]
-
-        return f"{self.producto.nombre} - {' / '.join(atributos) if atributos else 'Variante'}"
-
+        return f"{self.producto.nombre} - {self.talla}"
 
 # ------------------------------------------------------------
 # IMÁGENES
@@ -101,22 +56,10 @@ class ProductoImagen(models.Model):
         related_name='imagenes',
         on_delete=models.CASCADE
     )
-
-    variante = models.ForeignKey(
-        VarianteProducto,
-        related_name='imagenes',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
-    )
-
     imagen = models.URLField(max_length=500)
 
     def __str__(self):
-        if self.variante:
-            return f"Imagen de {self.producto.nombre} ({self.variante})"
         return f"Imagen de {self.producto.nombre}"
-
 
 # ------------------------------------------------------------
 # CARRITO
@@ -128,32 +71,20 @@ class Carrito(models.Model):
     def __str__(self):
         return f'Carrito de {self.usuario.username}'
 
-
 # ------------------------------------------------------------
-# ITEM CARRITO
+# ITEM CARRITO (CON VARIANTE)
 # ------------------------------------------------------------
 class ItemCarrito(models.Model):
     carrito = models.ForeignKey(Carrito, related_name='items', on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
-
-    variante = models.ForeignKey(
-        VarianteProducto,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
-    )
-
+    variante = models.ForeignKey(VarianteProducto, on_delete=models.CASCADE)
     cantidad = models.PositiveIntegerField(default=1)
 
     def __str__(self):
-        if self.variante:
-            return f'{self.cantidad} x {self.producto.nombre} ({self.variante})'
-        return f'{self.cantidad} x {self.producto.nombre}'
+        return f'{self.cantidad} x {self.producto.nombre} ({self.variante.talla})'
 
     def subtotal(self):
-        precio = self.variante.precio if self.variante and self.variante.precio else self.producto.precio
-        return self.cantidad * precio
-
+        return self.cantidad * self.producto.precio
 
 # ------------------------------------------------------------
 # PEDIDO
@@ -166,21 +97,13 @@ class Pedido(models.Model):
     def __str__(self):
         return f'Pedido #{self.id} - {self.usuario.username}'
 
-
 # ------------------------------------------------------------
-# ITEM PEDIDO
+# ITEM PEDIDO (CON VARIANTE)
 # ------------------------------------------------------------
 class ItemPedido(models.Model):
     pedido = models.ForeignKey(Pedido, related_name='items', on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
-
-    variante = models.ForeignKey(
-        VarianteProducto,
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
-    )
-
+    variante = models.ForeignKey(VarianteProducto, on_delete=models.CASCADE)
     cantidad = models.PositiveIntegerField()
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -188,6 +111,4 @@ class ItemPedido(models.Model):
         return self.cantidad * self.precio_unitario
 
     def __str__(self):
-        if self.variante:
-            return f'{self.cantidad} x {self.producto.nombre} ({self.variante})'
-        return f'{self.cantidad} x {self.producto.nombre}'
+        return f'{self.cantidad} x {self.producto.nombre} ({self.variante.talla})'
