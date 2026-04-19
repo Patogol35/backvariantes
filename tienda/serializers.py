@@ -11,7 +11,6 @@ from .models import (
 )
 from django.contrib.auth.models import User
 
-
 # ------------------------------------------------------------
 # CATEGORÍA
 # ------------------------------------------------------------
@@ -20,49 +19,21 @@ class CategoriaSerializer(serializers.ModelSerializer):
         model = Categoria
         fields = "__all__"
 
+# ------------------------------------------------------------
+# VARIANTE
+# ------------------------------------------------------------
+class VarianteProductoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VarianteProducto
+        fields = ['id', 'talla', 'stock']
 
 # ------------------------------------------------------------
 # IMÁGENES
 # ------------------------------------------------------------
 class ProductoImagenSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ProductoImagen
-        fields = ['id', 'imagen', 'producto', 'variante']
-
-    def validate(self, data):
-        variante = data.get('variante')
-        producto = data.get('producto')
-
-        if variante and variante.producto != producto:
-            raise serializers.ValidationError(
-                "La variante no pertenece al producto"
-            )
-
-        return data
-
-
-# ------------------------------------------------------------
-# VARIANTE 🔥 (ACTUALIZADO)
-# ------------------------------------------------------------
-class VarianteProductoSerializer(serializers.ModelSerializer):
-    imagenes = ProductoImagenSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = VarianteProducto
-        fields = [
-            'id',
-            'talla',
-            'color',
-            'material',
-            'edicion',
-            'capacidad',
-            'marca',
-            'precio',   # 🔥 precio por variante
-            'stock',
-            'imagenes'
-        ]
-
+        fields = ['imagen']
 
 # ------------------------------------------------------------
 # PRODUCTO
@@ -76,37 +47,19 @@ class ProductoSerializer(serializers.ModelSerializer):
         write_only=True
     )
 
-    # 🔥 SOLO imágenes generales (sin variante)
-    imagenes = serializers.SerializerMethodField()
-
+    imagenes = ProductoImagenSerializer(many=True, read_only=True)
     variantes = VarianteProductoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Producto
-        fields = [
-            'id',
-            'nombre',
-            'descripcion',
-            'precio',
-            'imagen',
-            'fecha_creacion',
-            'categoria',
-            'categoria_id',
-            'imagenes',
-            'variantes'
-        ]
-
-    def get_imagenes(self, obj):
-        imagenes = obj.imagenes.filter(variante__isnull=True)
-        return ProductoImagenSerializer(imagenes, many=True).data
-
+        fields = "__all__"
 
 # ------------------------------------------------------------
 # ITEM CARRITO
 # ------------------------------------------------------------
 class ItemCarritoSerializer(serializers.ModelSerializer):
     producto = ProductoSerializer(read_only=True)
-    variante = VarianteProductoSerializer(read_only=True, allow_null=True)
+    variante = VarianteProductoSerializer(read_only=True)
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
@@ -116,21 +69,15 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
     def get_subtotal(self, obj):
         return obj.subtotal()
 
-
 # ------------------------------------------------------------
 # CARRITO
 # ------------------------------------------------------------
 class CarritoSerializer(serializers.ModelSerializer):
     items = ItemCarritoSerializer(many=True, read_only=True)
-    total = serializers.SerializerMethodField()
 
     class Meta:
         model = Carrito
-        fields = ['id', 'usuario', 'creado', 'items', 'total']
-
-    def get_total(self, obj):
-        return sum(item.subtotal() for item in obj.items.all())
-
+        fields = ['id', 'usuario', 'creado', 'items']
 
 # ------------------------------------------------------------
 # USUARIO
@@ -165,13 +112,12 @@ class UserSerializer(serializers.ModelSerializer):
         validated_data['email'] = validated_data['email'].strip().lower()
         return User.objects.create_user(**validated_data)
 
-
 # ------------------------------------------------------------
 # ITEM PEDIDO
 # ------------------------------------------------------------
 class ItemPedidoSerializer(serializers.ModelSerializer):
     producto = ProductoSerializer(read_only=True)
-    variante = VarianteProductoSerializer(read_only=True, allow_null=True)
+    variante = VarianteProductoSerializer(read_only=True)
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
@@ -180,7 +126,6 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
 
     def get_subtotal(self, obj):
         return obj.subtotal()
-
 
 # ------------------------------------------------------------
 # PEDIDO
