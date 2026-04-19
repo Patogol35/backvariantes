@@ -50,11 +50,11 @@ class VarianteProducto(models.Model):
 
     # 🔥 NUEVOS CAMPOS
     material = models.CharField(max_length=50, blank=True, null=True)
-    edición = models.CharField(max_length=50, blank=True, null=True)
+    edicion = models.CharField(max_length=50, blank=True, null=True)
 
     # 🔥 TECNOLOGÍA
-    capacidad = models.CharField(max_length=50, blank=True, null=True)  # ej: 128GB, 256GB
-    marca = models.CharField(max_length=50, blank=True, null=True)      # ej: Samsung, Apple
+    capacidad = models.CharField(max_length=50, blank=True, null=True)
+    marca = models.CharField(max_length=50, blank=True, null=True)
 
     stock = models.PositiveIntegerField(default=0)
 
@@ -66,7 +66,7 @@ class VarianteProducto(models.Model):
                     'talla',
                     'color',
                     'material',
-                    'edición',
+                    'edicion',
                     'capacidad',
                     'marca'
                 ],
