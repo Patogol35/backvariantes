@@ -13,7 +13,7 @@ DEBUG = os.environ.get("DEBUG", "False") == "True"
 ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
-    "ecommerce-django-e44l.onrender.com",
+    "https://backvariantes.onrender.com",
     "ecommerce-jorge-patricio.vercel.app",
 ]
 
@@ -71,7 +71,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
 
-    # 👇 ESTA ES LA QUE FALTABA 🔥
+    
     'allauth.account.middleware.AccountMiddleware',
 
     'django.middleware.common.CommonMiddleware',
