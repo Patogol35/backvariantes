@@ -7,9 +7,7 @@ from .models import (
     Carrito,
     ItemCarrito,
     Pedido,
-    ItemPedido,
-    TipoAtributo,
-    ValorAtributo
+    ItemPedido
 )
 from django.contrib.auth.models import User
 
@@ -21,26 +19,6 @@ class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
         fields = "__all__"
-
-
-# ------------------------------------------------------------
-# 🔥 TIPO ATRIBUTO
-# ------------------------------------------------------------
-class TipoAtributoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TipoAtributo
-        fields = ['id', 'nombre']
-
-
-# ------------------------------------------------------------
-# 🔥 VALOR ATRIBUTO
-# ------------------------------------------------------------
-class ValorAtributoSerializer(serializers.ModelSerializer):
-    tipo = TipoAtributoSerializer(read_only=True)
-
-    class Meta:
-        model = ValorAtributo
-        fields = ['id', 'tipo', 'valor']
 
 
 # ------------------------------------------------------------
@@ -65,23 +43,14 @@ class ProductoImagenSerializer(serializers.ModelSerializer):
 
 
 # ------------------------------------------------------------
-# 🔥 VARIANTE (DINÁMICA)
+# VARIANTE
 # ------------------------------------------------------------
 class VarianteProductoSerializer(serializers.ModelSerializer):
     imagenes = ProductoImagenSerializer(many=True, read_only=True)
 
-    atributos = ValorAtributoSerializer(many=True, read_only=True)
-
-    atributos_ids = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=ValorAtributo.objects.all(),
-        write_only=True,
-        source='atributos'
-    )
-
     class Meta:
         model = VarianteProducto
-        fields = ['id', 'atributos', 'atributos_ids', 'stock', 'imagenes']
+        fields = ['id', 'talla', 'color', 'stock', 'imagenes']
 
 
 # ------------------------------------------------------------
@@ -96,7 +65,9 @@ class ProductoSerializer(serializers.ModelSerializer):
         write_only=True
     )
 
+    # 🔥 SOLO imágenes generales (sin variante)
     imagenes = serializers.SerializerMethodField()
+
     variantes = VarianteProductoSerializer(many=True, read_only=True)
 
     class Meta:
