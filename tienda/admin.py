@@ -13,7 +13,7 @@ from .models import (
 )
 
 # ------------------------------------------------------------
-# 🔥 FILTRO STOCK (AHORA SOBRE VARIANTES)
+# 🔥 FILTRO STOCK (SOBRE VARIANTES)
 # ------------------------------------------------------------
 class StockBajoFilter(admin.SimpleListFilter):
     title = 'Stock (variantes)'
@@ -27,12 +27,18 @@ class StockBajoFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'bajo':
-            return queryset.filter(variantes__stock__lte=5, variantes__stock__gt=0).distinct()
+            return queryset.filter(
+                variantes__stock__lte=5,
+                variantes__stock__gt=0
+            ).distinct()
 
         if self.value() == 'sin_stock':
-            return queryset.filter(variantes__stock=0).distinct()
+            return queryset.filter(
+                variantes__stock=0
+            ).distinct()
 
         return queryset
+
 
 # ------------------------------------------------------------
 # 📅 FILTRO FECHA
@@ -59,12 +65,23 @@ class FechaCreacionFilter(admin.SimpleListFilter):
 
         return queryset
 
+
 # ------------------------------------------------------------
-# 🧩 INLINE VARIANTES 🔥
+# 🧩 INLINE VARIANTES
 # ------------------------------------------------------------
 class VarianteInline(admin.TabularInline):
     model = VarianteProducto
     extra = 1
+
+    fields = (
+        'talla',
+        'color',
+        'capacidad',
+        'modelo',
+        'precio',
+        'stock'
+    )
+
 
 # ------------------------------------------------------------
 # 🖼️ INLINE IMÁGENES
@@ -72,6 +89,7 @@ class VarianteInline(admin.TabularInline):
 class ProductoImagenInline(admin.TabularInline):
     model = ProductoImagen
     extra = 1
+
 
 # ------------------------------------------------------------
 # 📂 CATEGORÍA
@@ -81,16 +99,40 @@ class CategoriaAdmin(admin.ModelAdmin):
     list_display = ("id", "nombre", "descripcion")
     search_fields = ["nombre"]
 
+
 # ------------------------------------------------------------
-# 🛍️ PRODUCTO (SIN STOCK)
+# 🛍️ PRODUCTO
 # ------------------------------------------------------------
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'precio', 'fecha_creacion', 'categoria')
-    search_fields = ['nombre']
-    list_filter = ['fecha_creacion', 'categoria', StockBajoFilter, FechaCreacionFilter]
 
-    # 🔥 aquí está la magia
+    # 🔥 Precio mínimo entre variantes
+    def precio_min(self, obj):
+        variantes = obj.variantes.all()
+        if variantes.exists():
+            return min(v.precio for v in variantes)
+        return obj.precio
+
+    precio_min.short_description = "Precio desde"
+
+    # 🔥 Stock total
+    def stock_total(self, obj):
+        return sum(v.stock for v in obj.variantes.all())
+
+    stock_total.short_description = "Stock total"
+
+    list_display = (
+        'nombre',
+        'precio_min',
+        'stock_total',
+        'fecha_creacion',
+        'categoria'
+    )
+
+    search_fields = ['nombre']
+    list_filter = ['categoria', StockBajoFilter, FechaCreacionFilter]
+
     inlines = [VarianteInline, ProductoImagenInline]
+
 
 # ------------------------------------------------------------
 # 🛒 CARRITO
@@ -98,6 +140,8 @@ class ProductoAdmin(admin.ModelAdmin):
 class ItemCarritoInline(admin.TabularInline):
     model = ItemCarrito
     extra = 0
+    fields = ('producto', 'variante', 'cantidad')
+
 
 class CarritoAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'creado')
@@ -105,18 +149,22 @@ class CarritoAdmin(admin.ModelAdmin):
     search_fields = ['usuario__username']
     list_filter = ['creado']
 
+
 # ------------------------------------------------------------
 # 📦 PEDIDOS
 # ------------------------------------------------------------
 class ItemPedidoInline(admin.TabularInline):
     model = ItemPedido
     extra = 0
+    fields = ('producto', 'variante', 'cantidad', 'precio_unitario')
+
 
 class PedidoAdmin(admin.ModelAdmin):
-    list_display = ('usuario', 'fecha')
+    list_display = ('usuario', 'fecha', 'total')
     inlines = [ItemPedidoInline]
     search_fields = ['usuario__username']
     list_filter = ['fecha']
+
 
 # ------------------------------------------------------------
 # 🚀 REGISTROS
