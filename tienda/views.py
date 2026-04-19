@@ -1,7 +1,6 @@
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import F, Prefetch
 from django.conf import settings
 
 from rest_framework import viewsets, generics, permissions
@@ -22,8 +21,7 @@ from .models import (
     ItemCarrito,
     Pedido,
     ItemPedido,
-    VarianteProducto,
-    ProductoImagen
+    VarianteProducto
 )
 
 from .serializers import (
@@ -33,46 +31,24 @@ from .serializers import (
     UserSerializer,
     ItemCarritoSerializer,
     PedidoSerializer,
-    ProductoImagenSerializer
 )
 
 from .filters import ProductoFilter
 
-
 # ------------------------------------------------------------
-# PRODUCTO 🔥 CORREGIDO
+# PRODUCTO
 # ------------------------------------------------------------
 class ProductoViewSet(viewsets.ModelViewSet):
-    queryset = Producto.objects.prefetch_related(
-        'imagenes',
-        Prefetch(
-            'variantes',
-            queryset=VarianteProducto.objects.prefetch_related('imagenes')
-        )
-    )
+    queryset = Producto.objects.all()
     serializer_class = ProductoSerializer
     filterset_class = ProductoFilter
 
-
-# ------------------------------------------------------------
-# CATEGORIA
-# ------------------------------------------------------------
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
 
-
 # ------------------------------------------------------------
-# IMÁGENES
-# ------------------------------------------------------------
-class ProductoImagenViewSet(viewsets.ModelViewSet):
-    queryset = ProductoImagen.objects.all()
-    serializer_class = ProductoImagenSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-
-# ------------------------------------------------------------
-# AGREGAR AL CARRITO
+# AGREGAR AL CARRITO (CON VARIANTE)
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -81,24 +57,17 @@ def agregar_al_carrito(request):
     variante_id = request.data.get('variante_id')
     cantidad = int(request.data.get('cantidad', 1))
 
+    if not variante_id:
+        return Response({'error': 'Debes seleccionar una talla'}, status=400)
+
     try:
         producto = Producto.objects.get(id=producto_id)
-    except Producto.DoesNotExist:
-        return Response({'error': 'Producto no existe'}, status=404)
+        variante = VarianteProducto.objects.get(id=variante_id, producto=producto)
+    except:
+        return Response({'error': 'Producto o variante no válida'}, status=404)
 
-    if producto.variantes.exists():
-        if not variante_id:
-            return Response({'error': 'Debes seleccionar una variante'}, status=400)
-
-        try:
-            variante = VarianteProducto.objects.get(id=variante_id, producto=producto)
-        except VarianteProducto.DoesNotExist:
-            return Response({'error': 'Variante no válida'}, status=404)
-
-        if cantidad > variante.stock:
-            return Response({'error': f'Solo hay {variante.stock} disponibles'}, status=400)
-    else:
-        variante = None
+    if cantidad > variante.stock:
+        return Response({'error': f'Solo hay {variante.stock} disponibles'}, status=400)
 
     carrito, _ = Carrito.objects.get_or_create(usuario=request.user)
 
@@ -112,7 +81,7 @@ def agregar_al_carrito(request):
     if not creado:
         nueva_cantidad = item.cantidad + cantidad
 
-        if variante and nueva_cantidad > variante.stock:
+        if nueva_cantidad > variante.stock:
             return Response({'error': 'Stock insuficiente'}, status=400)
 
         if nueva_cantidad <= 0:
@@ -123,7 +92,6 @@ def agregar_al_carrito(request):
         item.save()
 
     return Response(ItemCarritoSerializer(item).data, status=201)
-
 
 # ------------------------------------------------------------
 # ELIMINAR ITEM
@@ -137,7 +105,6 @@ def eliminar_del_carrito(request, item_id):
         return Response({'message': 'Eliminado'}, status=200)
     except ItemCarrito.DoesNotExist:
         return Response({'error': 'No encontrado'}, status=404)
-
 
 # ------------------------------------------------------------
 # ACTUALIZAR CANTIDAD
@@ -155,14 +122,12 @@ def actualizar_cantidad_carrito(request, item_id):
         item.delete()
         return Response({'message': 'Eliminado'}, status=200)
 
-    if item.variante and cantidad > item.variante.stock:
+    if cantidad > item.variante.stock:
         return Response({'error': f'Solo hay {item.variante.stock} disponibles'}, status=400)
 
     item.cantidad = cantidad
     item.save()
-
     return Response(ItemCarritoSerializer(item).data)
-
 
 # ------------------------------------------------------------
 # CARRITO
@@ -175,14 +140,12 @@ class CarritoView(generics.RetrieveAPIView):
         carrito, _ = Carrito.objects.get_or_create(usuario=self.request.user)
         return carrito
 
-
 # ------------------------------------------------------------
 # REGISTER
 # ------------------------------------------------------------
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -193,9 +156,8 @@ def user_profile(request):
         "email": request.user.email,
     })
 
-
 # ------------------------------------------------------------
-# CREAR PEDIDO 🔥 CORREGIDO CON PRECIO VARIANTE
+# CREAR PEDIDO (CON VARIANTES)
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -206,63 +168,43 @@ def crear_pedido(request):
     if not items:
         return Response({'error': 'Carrito vacío'}, status=400)
 
+    # Validar stock
     for it in items:
-        if it.variante and it.variante.stock < it.cantidad:
+        if it.variante.stock < it.cantidad:
             return Response({
-                'error': f'Stock insuficiente para {it.producto.nombre} ({it.variante})'
+                'error': f'Stock insuficiente para {it.producto.nombre} ({it.variante.talla})'
             }, status=400)
 
     with transaction.atomic():
         total = sum(
-            (
-                Decimal(
-                    it.variante.precio
-                    if it.variante and it.variante.precio is not None
-                    else it.producto.precio
-                ) * it.cantidad
-                for it in items
-            ),
+            (Decimal(it.producto.precio) * it.cantidad for it in items),
             Decimal('0')
         )
 
-        pedido = Pedido.objects.create(
-            usuario=request.user,
-            total=total
-        )
+        pedido = Pedido.objects.create(usuario=request.user, total=total)
 
         for it in items:
             variante = it.variante
-
-            if variante:
-                variante.stock = F('stock') - it.cantidad
-                variante.save()
-                variante.refresh_from_db()
-
-            precio = (
-                it.variante.precio
-                if it.variante and it.variante.precio is not None
-                else it.producto.precio
-            )
+            variante.stock -= it.cantidad
+            variante.save()
 
             ItemPedido.objects.create(
                 pedido=pedido,
                 producto=it.producto,
                 variante=variante,
                 cantidad=it.cantidad,
-                precio_unitario=precio
+                precio_unitario=it.producto.precio
             )
 
         carrito.items.all().delete()
 
     return Response(PedidoSerializer(pedido).data, status=201)
 
-
 # ------------------------------------------------------------
 # LISTA PEDIDOS
 # ------------------------------------------------------------
 class PedidoPagination(PageNumberPagination):
     page_size = 10
-
 
 class ListaPedidosUsuario(generics.ListAPIView):
     serializer_class = PedidoSerializer
@@ -271,7 +213,6 @@ class ListaPedidosUsuario(generics.ListAPIView):
 
     def get_queryset(self):
         return Pedido.objects.filter(usuario=self.request.user).order_by('-id')
-
 
 # ------------------------------------------------------------
 # GOOGLE LOGIN
