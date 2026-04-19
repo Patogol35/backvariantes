@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.conf import settings
 
 from rest_framework import viewsets, generics, permissions
@@ -22,7 +22,8 @@ from .models import (
     ItemCarrito,
     Pedido,
     ItemPedido,
-    VarianteProducto
+    VarianteProducto,
+    ProductoImagen
 )
 
 from .serializers import (
@@ -32,6 +33,7 @@ from .serializers import (
     UserSerializer,
     ItemCarritoSerializer,
     PedidoSerializer,
+    ProductoImagenSerializer
 )
 
 from .filters import ProductoFilter
@@ -41,18 +43,33 @@ from .filters import ProductoFilter
 # PRODUCTO
 # ------------------------------------------------------------
 class ProductoViewSet(viewsets.ModelViewSet):
-    queryset = Producto.objects.all()
+    queryset = Producto.objects.prefetch_related(
+        'imagenes',
+        Prefetch('variantes__imagenes')
+    )
     serializer_class = ProductoSerializer
     filterset_class = ProductoFilter
 
 
+# ------------------------------------------------------------
+# CATEGORIA
+# ------------------------------------------------------------
 class CategoriaViewSet(viewsets.ModelViewSet):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
 
 
 # ------------------------------------------------------------
-# AGREGAR AL CARRITO (SOPORTA VARIANTES Y SIN VARIANTES)
+# IMÁGENES (🔥 NUEVO)
+# ------------------------------------------------------------
+class ProductoImagenViewSet(viewsets.ModelViewSet):
+    queryset = ProductoImagen.objects.all()
+    serializer_class = ProductoImagenSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+# ------------------------------------------------------------
+# AGREGAR AL CARRITO
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -66,7 +83,6 @@ def agregar_al_carrito(request):
     except Producto.DoesNotExist:
         return Response({'error': 'Producto no existe'}, status=404)
 
-    # 🔥 si tiene variantes → obligar selección
     if producto.variantes.exists():
         if not variante_id:
             return Response({'error': 'Debes seleccionar una variante'}, status=400)
@@ -79,7 +95,7 @@ def agregar_al_carrito(request):
         if cantidad > variante.stock:
             return Response({'error': f'Solo hay {variante.stock} disponibles'}, status=400)
     else:
-        variante = None  # producto sin variantes
+        variante = None
 
     carrito, _ = Carrito.objects.get_or_create(usuario=request.user)
 
@@ -176,7 +192,7 @@ def user_profile(request):
 
 
 # ------------------------------------------------------------
-# CREAR PEDIDO (🔥 AQUÍ SE DESCUENTA STOCK)
+# CREAR PEDIDO
 # ------------------------------------------------------------
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -187,7 +203,6 @@ def crear_pedido(request):
     if not items:
         return Response({'error': 'Carrito vacío'}, status=400)
 
-    # 🔥 validar stock
     for it in items:
         if it.variante and it.variante.stock < it.cantidad:
             return Response({
@@ -208,7 +223,6 @@ def crear_pedido(request):
         for it in items:
             variante = it.variante
 
-            # 🔥 descuento seguro de stock
             if variante:
                 variante.stock = F('stock') - it.cantidad
                 variante.save()
@@ -222,7 +236,6 @@ def crear_pedido(request):
                 precio_unitario=it.producto.precio
             )
 
-        # 🔥 limpiar carrito
         carrito.items.all().delete()
 
     return Response(PedidoSerializer(pedido).data, status=201)
@@ -281,4 +294,3 @@ def google_login(request):
 
     except Exception:
         return Response({'error': 'Token inválido'}, status=400)
-
