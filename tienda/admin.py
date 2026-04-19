@@ -16,7 +16,7 @@ ValorAtributo
 
 ------------------------------------------------------------
 
-🔥 FILTRO STOCK (SOBRE VARIANTES)
+FILTRO STOCK (SOBRE VARIANTES)
 
 ------------------------------------------------------------
 
@@ -26,7 +26,7 @@ parameter_name = 'stock_variantes'
 
 def lookups(self, request, model_admin):
     return [
-        ('bajo', 'Stock bajo (≤5)'),
+        ('bajo', 'Stock bajo (<=5)'),
         ('sin_stock', 'Sin stock'),
     ]
 
@@ -46,7 +46,7 @@ def queryset(self, request, queryset):
 
 ------------------------------------------------------------
 
-📅 FILTRO FECHA
+FILTRO FECHA
 
 ------------------------------------------------------------
 
@@ -74,18 +74,17 @@ def queryset(self, request, queryset):
 
 ------------------------------------------------------------
 
-🧩 INLINE VARIANTES (CORREGIDO)
+INLINE VARIANTES (CORREGIDO)
 
 ------------------------------------------------------------
 
-class VarianteInline(admin.StackedInline):  # 🔥 CAMBIO CLAVE
+class VarianteInline(admin.StackedInline):
 model = VarianteProducto
 extra = 1
-# ❌ QUITAMOS filter_horizontal porque rompe el admin
 
 ------------------------------------------------------------
 
-🖼️ INLINE IMÁGENES
+INLINE IMAGENES
 
 ------------------------------------------------------------
 
@@ -95,7 +94,7 @@ extra = 1
 
 ------------------------------------------------------------
 
-📂 CATEGORÍA
+CATEGORIA
 
 ------------------------------------------------------------
 
@@ -106,7 +105,7 @@ search_fields = ["nombre"]
 
 ------------------------------------------------------------
 
-🔥 TIPO ATRIBUTO
+TIPO ATRIBUTO
 
 ------------------------------------------------------------
 
@@ -117,7 +116,7 @@ search_fields = ["nombre"]
 
 ------------------------------------------------------------
 
-🔥 VALORES ATRIBUTO
+VALORES ATRIBUTO
 
 ------------------------------------------------------------
 
@@ -129,7 +128,7 @@ search_fields = ["valor"]
 
 ------------------------------------------------------------
 
-🛍️ PRODUCTO
+PRODUCTO
 
 ------------------------------------------------------------
 
@@ -148,7 +147,7 @@ stock_total.short_description = "Stock total"
 
 ------------------------------------------------------------
 
-🛒 CARRITO
+CARRITO
 
 ------------------------------------------------------------
 
@@ -166,7 +165,7 @@ list_filter = ['creado']
 
 ------------------------------------------------------------
 
-📦 PEDIDOS
+PEDIDOS
 
 ------------------------------------------------------------
 
