@@ -1,6 +1,16 @@
 from rest_framework import serializers
-from .models import Producto, Categoria, ProductoImagen, Carrito, ItemCarrito, Pedido, ItemPedido
+from .models import (
+    Producto,
+    Categoria,
+    ProductoImagen,
+    VarianteProducto,
+    Carrito,
+    ItemCarrito,
+    Pedido,
+    ItemPedido
+)
 from django.contrib.auth.models import User
+
 
 # ------------------------------------------------------------
 # CATEGORÍA
@@ -12,7 +22,16 @@ class CategoriaSerializer(serializers.ModelSerializer):
 
 
 # ------------------------------------------------------------
-# PRODUCTO IMAGEN (NUEVO)
+# VARIANTE
+# ------------------------------------------------------------
+class VarianteProductoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VarianteProducto
+        fields = ['id', 'talla', 'color', 'stock']
+
+
+# ------------------------------------------------------------
+# IMÁGENES
 # ------------------------------------------------------------
 class ProductoImagenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -25,19 +44,28 @@ class ProductoImagenSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 class ProductoSerializer(serializers.ModelSerializer):
     categoria = CategoriaSerializer(read_only=True)
-
     categoria_id = serializers.PrimaryKeyRelatedField(
         queryset=Categoria.objects.all(),
         source="categoria",
         write_only=True
     )
-
-    # MÚLTIPLES IMÁGENES
     imagenes = ProductoImagenSerializer(many=True, read_only=True)
+    variantes = VarianteProductoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Producto
-        fields = "__all__"
+        fields = [
+            'id',
+            'nombre',
+            'descripcion',
+            'precio',
+            'imagen',
+            'fecha_creacion',
+            'categoria',
+            'categoria_id',
+            'imagenes',
+            'variantes'
+        ]
 
 
 # ------------------------------------------------------------
@@ -45,11 +73,12 @@ class ProductoSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 class ItemCarritoSerializer(serializers.ModelSerializer):
     producto = ProductoSerializer(read_only=True)
+    variante = VarianteProductoSerializer(read_only=True, allow_null=True)
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
         model = ItemCarrito
-        fields = ['id', 'producto', 'cantidad', 'subtotal']
+        fields = ['id', 'producto', 'variante', 'cantidad', 'subtotal']
 
     def get_subtotal(self, obj):
         return obj.subtotal()
@@ -60,10 +89,14 @@ class ItemCarritoSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 class CarritoSerializer(serializers.ModelSerializer):
     items = ItemCarritoSerializer(many=True, read_only=True)
+    total = serializers.SerializerMethodField()
 
     class Meta:
         model = Carrito
-        fields = ['id', 'usuario', 'creado', 'items']
+        fields = ['id', 'usuario', 'creado', 'items', 'total']
+
+    def get_total(self, obj):
+        return sum(item.subtotal() for item in obj.items.all())
 
 
 # ------------------------------------------------------------
@@ -80,32 +113,24 @@ class UserSerializer(serializers.ModelSerializer):
             'email': {'required': True, 'allow_blank': False}
         }
 
-    # VALIDACIÓN DE EMAIL
     def validate_email(self, value):
         email = value.strip().lower()
         if User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError("Este correo ya está registrado.")
         return email
 
-    # VALIDACIÓN DE CONTRASEÑA
     def validate_password(self, password):
         if len(password) < 6:
             raise serializers.ValidationError("La contraseña debe tener al menos 6 caracteres.")
         if not any(char.isdigit() for char in password):
-            raise serializers.ValidationError("La contraseña debe incluir al menos un número.")
+            raise serializers.ValidationError("Debe incluir al menos un número.")
         if not any(not char.isalnum() for char in password):
-            raise serializers.ValidationError("La contraseña debe incluir al menos un símbolo.")
+            raise serializers.ValidationError("Debe incluir al menos un símbolo.")
         return password
 
-    # CREACIÓN DE USUARIO
     def create(self, validated_data):
         validated_data['email'] = validated_data['email'].strip().lower()
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password']
-        )
-        return user
+        return User.objects.create_user(**validated_data)
 
 
 # ------------------------------------------------------------
@@ -113,11 +138,12 @@ class UserSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 class ItemPedidoSerializer(serializers.ModelSerializer):
     producto = ProductoSerializer(read_only=True)
+    variante = VarianteProductoSerializer(read_only=True, allow_null=True)
     subtotal = serializers.SerializerMethodField()
 
     class Meta:
         model = ItemPedido
-        fields = ['producto', 'cantidad', 'precio_unitario', 'subtotal']
+        fields = ['producto', 'variante', 'cantidad', 'precio_unitario', 'subtotal']
 
     def get_subtotal(self, obj):
         return obj.subtotal()
@@ -133,3 +159,4 @@ class PedidoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pedido
         fields = ['id', 'usuario', 'fecha', 'total', 'items']
+
