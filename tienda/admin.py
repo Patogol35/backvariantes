@@ -1,33 +1,10 @@
 from django.contrib import admin
+from .models import Producto, ProductoImagen, Categoria, Carrito, ItemCarrito, Pedido, ItemPedido
 from datetime import datetime, timedelta
 
-from .models import (
-    Producto,
-    ProductoImagen,
-    Categoria,
-    Carrito,
-    ItemCarrito,
-    Pedido,
-    ItemPedido,
-    VarianteProducto,
-    TipoAtributo,
-    ValorAtributo
-)
-
-# ------------------------------------------------------------
-# 🖼️ INLINE IMÁGENES
-# ------------------------------------------------------------
-class ProductoImagenInline(admin.TabularInline):
-    model = ProductoImagen
-    extra = 1
-
-
-# ------------------------------------------------------------
-# 🔥 FILTRO STOCK
-# ------------------------------------------------------------
 class StockBajoFilter(admin.SimpleListFilter):
-    title = 'Stock (variantes)'
-    parameter_name = 'stock_variantes'
+    title = 'Stock'
+    parameter_name = 'stock'
 
     def lookups(self, request, model_admin):
         return [
@@ -37,22 +14,12 @@ class StockBajoFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         if self.value() == 'bajo':
-            return queryset.filter(
-                variantes__stock__lte=5,
-                variantes__stock__gt=0
-            ).distinct()
-
+            return queryset.filter(stock__lte=5, stock__gt=0)
         if self.value() == 'sin_stock':
-            return queryset.filter(
-                variantes__stock=0
-            ).distinct()
-
+            return queryset.filter(stock=0)
         return queryset
 
 
-# ------------------------------------------------------------
-# 📅 FILTRO FECHA
-# ------------------------------------------------------------
 class FechaCreacionFilter(admin.SimpleListFilter):
     title = 'Fecha de creación'
     parameter_name = 'fecha_creacion_custom'
@@ -65,90 +32,37 @@ class FechaCreacionFilter(admin.SimpleListFilter):
 
     def queryset(self, request, queryset):
         hoy = datetime.now().date()
-
         if self.value() == 'hoy':
             return queryset.filter(fecha_creacion__date=hoy)
-
         if self.value() == 'semana':
             semana_inicio = hoy - timedelta(days=hoy.weekday())
             return queryset.filter(fecha_creacion__date__gte=semana_inicio)
-
         return queryset
 
 
-# ------------------------------------------------------------
-# 📂 CATEGORÍA
-# ------------------------------------------------------------
+class ProductoImagenInline(admin.TabularInline):
+    model = ProductoImagen
+    extra = 1
+    
+
 @admin.register(Categoria)
 class CategoriaAdmin(admin.ModelAdmin):
     list_display = ("id", "nombre", "descripcion")
     search_fields = ["nombre"]
 
 
-# ------------------------------------------------------------
-# 🔥 TIPO ATRIBUTO
-# ------------------------------------------------------------
-@admin.register(TipoAtributo)
-class TipoAtributoAdmin(admin.ModelAdmin):
-    list_display = ("id", "nombre")
-    search_fields = ["nombre"]
-
-
-# ------------------------------------------------------------
-# 🔥 VALOR ATRIBUTO
-# ------------------------------------------------------------
-@admin.register(ValorAtributo)
-class ValorAtributoAdmin(admin.ModelAdmin):
-    list_display = ("id", "tipo", "valor")
-    list_filter = ("tipo",)
-    search_fields = ["valor"]
-
-
-# ------------------------------------------------------------
-# 🛍️ PRODUCTO
-# ------------------------------------------------------------
-@admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'precio', 'stock_total', 'fecha_creacion', 'categoria')
-    search_fields = ['nombre', 'categoria__nombre']
+    list_display = ('nombre', 'precio', 'stock', 'fecha_creacion', 'categoria')
+    search_fields = ['nombre']
     list_filter = ['fecha_creacion', 'categoria', StockBajoFilter, FechaCreacionFilter]
-
-    # 🔥 SOLO imágenes (QUITAMOS variantes)
-    inlines = [ProductoImagenInline]
-
-    def stock_total(self, obj):
-        return sum(v.stock for v in obj.variantes.all())
-
-    stock_total.short_description = "Stock total"
+    inlines = [ProductoImagenInline]  
 
 
-# ------------------------------------------------------------
-# 🔥 VARIANTES (SEPARADO - SOLUCIÓN REAL)
-# ------------------------------------------------------------
-@admin.register(VarianteProducto)
-class VarianteProductoAdmin(admin.ModelAdmin):
-    list_display = ('producto', 'mostrar_atributos', 'stock')
-    list_filter = ('producto',)
-    search_fields = ('producto__nombre',)
-
-    filter_horizontal = ('atributos',)
-
-    def mostrar_atributos(self, obj):
-        return ", ".join([str(a) for a in obj.atributos.all()])
-
-    mostrar_atributos.short_description = "Atributos"
-
-
-# ------------------------------------------------------------
-# 🛒 CARRITO
-# ------------------------------------------------------------
 class ItemCarritoInline(admin.TabularInline):
     model = ItemCarrito
     extra = 0
-    readonly_fields = ('producto', 'variante', 'cantidad')
 
 
-@admin.register(Carrito)
 class CarritoAdmin(admin.ModelAdmin):
     list_display = ('usuario', 'creado')
     inlines = [ItemCarritoInline]
@@ -156,18 +70,17 @@ class CarritoAdmin(admin.ModelAdmin):
     list_filter = ['creado']
 
 
-# ------------------------------------------------------------
-# 📦 PEDIDOS
-# ------------------------------------------------------------
 class ItemPedidoInline(admin.TabularInline):
     model = ItemPedido
     extra = 0
-    readonly_fields = ('producto', 'variante', 'cantidad', 'precio_unitario')
 
 
-@admin.register(Pedido)
 class PedidoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'usuario', 'total', 'fecha')
+    list_display = ('usuario', 'fecha')
     inlines = [ItemPedidoInline]
     search_fields = ['usuario__username']
     list_filter = ['fecha']
+
+admin.site.register(Producto, ProductoAdmin)
+admin.site.register(Carrito, CarritoAdmin)
+admin.site.register(Pedido, PedidoAdmin)
