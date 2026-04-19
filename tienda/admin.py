@@ -9,7 +9,9 @@ from .models import (
     ItemCarrito,
     Pedido,
     ItemPedido,
-    VarianteProducto
+    VarianteProducto,
+    TipoAtributo,
+    ValorAtributo
 )
 
 # ------------------------------------------------------------
@@ -67,12 +69,12 @@ class FechaCreacionFilter(admin.SimpleListFilter):
 
 
 # ------------------------------------------------------------
-# 🧩 INLINE VARIANTES (CON COLOR + TALLA)
+# 🧩 INLINE VARIANTES (DINÁMICAS)
 # ------------------------------------------------------------
 class VarianteInline(admin.TabularInline):
     model = VarianteProducto
     extra = 1
-    fields = ('talla', 'color', 'stock')
+    filter_horizontal = ('atributos',)  # 🔥 selector bonito
 
 
 # ------------------------------------------------------------
@@ -90,6 +92,25 @@ class ProductoImagenInline(admin.TabularInline):
 class CategoriaAdmin(admin.ModelAdmin):
     list_display = ("id", "nombre", "descripcion")
     search_fields = ["nombre"]
+
+
+# ------------------------------------------------------------
+# 🔥 NUEVO: TIPO ATRIBUTO
+# ------------------------------------------------------------
+@admin.register(TipoAtributo)
+class TipoAtributoAdmin(admin.ModelAdmin):
+    list_display = ("id", "nombre")
+    search_fields = ["nombre"]
+
+
+# ------------------------------------------------------------
+# 🔥 NUEVO: VALORES ATRIBUTO
+# ------------------------------------------------------------
+@admin.register(ValorAtributo)
+class ValorAtributoAdmin(admin.ModelAdmin):
+    list_display = ("id", "tipo", "valor")
+    list_filter = ("tipo",)
+    search_fields = ["valor"]
 
 
 # ------------------------------------------------------------
