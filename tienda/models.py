@@ -50,7 +50,7 @@ class VarianteProducto(models.Model):
 
     # 🔥 NUEVOS CAMPOS
     material = models.CharField(max_length=50, blank=True, null=True)
-    estilo = models.CharField(max_length=50, blank=True, null=True)
+    edición = models.CharField(max_length=50, blank=True, null=True)
 
     # 🔥 TECNOLOGÍA
     capacidad = models.CharField(max_length=50, blank=True, null=True)  # ej: 128GB, 256GB
@@ -66,7 +66,7 @@ class VarianteProducto(models.Model):
                     'talla',
                     'color',
                     'material',
-                    'estilo',
+                    'edición',
                     'capacidad',
                     'marca'
                 ],
