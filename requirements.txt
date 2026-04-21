@@ -14,5 +14,8 @@ django-allauth==0.61.1
 dj-rest-auth==5.0.2
 google-auth
 
+# Pagos
+stripe==9.8.0
+
 # Static en producción
 whitenoise
