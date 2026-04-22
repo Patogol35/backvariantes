@@ -40,9 +40,15 @@ from .filters import ProductoFilter
 # PRODUCTO
 # ------------------------------------------------------------
 class ProductoViewSet(viewsets.ModelViewSet):
-    queryset = Producto.objects.all()
     serializer_class = ProductoSerializer
     filterset_class = ProductoFilter
+
+    def get_queryset(self):
+        return Producto.objects.all().prefetch_related(
+            'imagenes',              # imágenes del producto
+            'variantes',             # variantes
+            'variantes__imagenes'    # 🔥 imágenes de cada variante
+        )
 
 
 class CategoriaViewSet(viewsets.ModelViewSet):
