@@ -15,6 +15,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "backvariantes.onrender.com",
     "jorge-patricio-ecommerce.vercel.app",
+    "https://rey-self.vercel.app",
 ]
 
 # =========================
@@ -148,6 +149,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     "https://jorge-patricio-ecommerce.vercel.app",
+    "https://rey-self.vercel.app",
 ]
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
